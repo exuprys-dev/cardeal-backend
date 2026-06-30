@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleImage;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -33,14 +34,37 @@ class DatabaseSeeder extends Seeder
             'remember_token' => Str::random(10),
         ]);
 
-        // 3. On génère 10 véhicules pour l'admin principal
+        // 3. On génère 10 véhicules pour l'admin principal ET on leur attache des images
         Vehicle::factory(10)->create([
             'user_id' => $admin->id
-        ]);
+        ])->each(function ($vehicle) {
+            // Pour chaque véhicule créé, on génère 3 images
+            // La première sera l'image principale (is_main = true)
+            $vehicle->images()->create([
+                'path' => 'vehicles/main_car_' . rand(1, 5) . '.jpg',
+                'is_main' => true
+            ]);
 
-        // 4. On génère 5 véhicules pour l'autre agent
+            // Les deux autres seront des images secondaires de la galerie
+            VehicleImage::factory(2)->create([
+                'vehicle_id' => $vehicle->id,
+                'is_main' => false
+            ]);
+        });
+
+        // 4. On fait exactement pareil pour les 5 véhicules de l'autre agent
         Vehicle::factory(5)->create([
             'user_id' => $agent->id
-        ]);
+        ])->each(function ($vehicle) {
+            $vehicle->images()->create([
+                'path' => 'vehicles/main_car_' . rand(1, 5) . '.jpg',
+                'is_main' => true
+            ]);
+
+            VehicleImage::factory(2)->create([
+                'vehicle_id' => $vehicle->id,
+                'is_main' => false
+            ]);
+        });
     }
 }
