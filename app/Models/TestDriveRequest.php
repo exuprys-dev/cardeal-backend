@@ -11,6 +11,10 @@ class TestDriveRequest extends Model
         'requested_date',
         'phone',
         'status',
+        'requested_time',
+        'first_name',
+        'last_name',
+        'email',
     ];
 
     public function vehicle()

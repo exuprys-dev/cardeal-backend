@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'password' => bcrypt('password'), // Le mot de passe sera 'password'
             'remember_token' => Str::random(10),
+            'role' => 'admin', // On
         ]);
 
         // 2. On crée un deuxième agent de test pour simuler le cas "Multi-agents" (Option B)
@@ -32,6 +33,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'password' => bcrypt('password'),
             'remember_token' => Str::random(10),
+            'role' => 'user', // Un agent classique, pas un admin
         ]);
 
         // 3. On génère 10 véhicules pour l'admin principal ET on leur attache des images
@@ -65,6 +67,29 @@ class DatabaseSeeder extends Seeder
                 'vehicle_id' => $vehicle->id,
                 'is_main' => false
             ]);
+        });
+
+        // 5. On peut également créer d'autres utilisateurs de test si nécessaire
+        User::factory(3)->create(); // 3 utilisateurs aléatoires supplémentaires
+
+        // 6. Pour chaque nouveau user créé, on peut également générer quelques véhicules et images pour eux
+        User::all()->each(function ($user) {
+            // On ne veut pas créer de véhicules pour l'admin principal, seulement pour les agents
+            if ($user->role === 'user') {
+                Vehicle::factory(rand(1, 3))->create([
+                    'user_id' => $user->id
+                ])->each(function ($vehicle) {
+                    $vehicle->images()->create([
+                        'path' => 'vehicles/main_car_' . rand(1, 5) . '.jpg',
+                        'is_main' => true
+                    ]); 
+
+                    VehicleImage::factory(2)->create([
+                        'vehicle_id' => $vehicle->id,
+                        'is_main' => false
+                    ]);
+                });
+            }
         });
     }
 }

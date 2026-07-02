@@ -50,7 +50,8 @@ class AuthController extends Controller
             'user'    => [
                 'id'    => $user->id,
                 'name'  => $user->name,
-                'email' => $user->email
+                'email' => $user->email,
+                'role'  => $user->role
             ],
             'token'   => $token
         ], 200);
@@ -186,6 +187,40 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Utilisateur supprimé avec succès'
+        ], 200);
+    }
+
+    // Modifier son propre mot de passe
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+            'new_password_confirmation' => 'required|string|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le mot de passe actuel est incorrect'
+            ], 422);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mot de passe modifié avec succès'
         ], 200);
     }
 }

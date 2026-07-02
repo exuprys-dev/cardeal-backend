@@ -14,9 +14,13 @@ return new class extends Migration
         Schema::create('test_drive_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('vehicle_id')->constrained()->onDelete('cascade');
+            $table->string('first_name', 100);
+            $table->string('last_name', 100);
+            $table->string('email', 150);
             $table->date('requested_date');
-            $table->string('phone');
-            $table->enum('status', ['En attente', 'Approuvée', 'Refusée'])->default('En attente');
+            $table->time('requested_time')->nullable();
+            $table->string('phone', 20);
+            $table->enum('status', ['En attente', 'Approuvée', 'Terminée', 'Annulée'])->default('En attente');
             $table->timestamps();
         });
     }

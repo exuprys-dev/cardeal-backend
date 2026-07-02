@@ -188,4 +188,26 @@ class VehicleController extends Controller
             'message' => 'Véhicule et ses images supprimés avec succès du système.'
         ], 200);
     }
+
+    /**
+     * 4. Récupérer les véhicules d'un agent spécifique (pour le tableau de bord)
+     */
+    public function dashboardIndex(Request $request)
+    {
+        $user = $request->user(); // L'agent connecté
+
+        // Si l'utilisateur est un admin, on retourne tous les véhicules
+        if ($user->role === 'admin') {
+            $vehicles = Vehicle::with('images')->latest()->paginate(6); // Pagination pour le tableau de bord
+        } else {
+            // Sinon, on ne retourne que les véhicules de l'agent connecté
+            $vehicles = Vehicle::with('images')->where('user_id', $user->id)->latest()->paginate(6);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Véhicules récupérés avec succès pour le tableau de bord.',
+            'data' => $vehicles
+        ], 200);
+    }
 }

@@ -124,7 +124,10 @@ class ContactController extends Controller
         // 1. Validation stricte des données envoyées par React
         $validator = Validator::make($request->all(), [
             'vehicle_id' => 'required|exists:vehicles,id', // Doit exister dans la table vehicles
-            'phone' => 'required|string',
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'required|email|max:150',
+            'phone' => 'required|string|max:20',
             'requested_date' => 'required|date|after_or_equal:today', // La date doit être aujourd'hui ou dans le futur
         ]);
 
@@ -141,6 +144,9 @@ class ContactController extends Controller
             'vehicle_id' => $request->vehicle_id,
             'requested_date' => $request->requested_date,
             'phone' => $request->phone,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
             'status' => 'En attente', // Statut par défaut
         ]);
 
