@@ -71,7 +71,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users', [AuthController::class, 'store']);
     Route::put('/users/{id}', [AuthController::class, 'update']);
     Route::delete('/users/{id}', [AuthController::class, 'destroy']);
-    Route::put('/users/change-password', [AuthController::class, 'changePassword']);
+    Route::put('/users/{id}/change-password', [AuthController::class, 'changePassword']);
+
+    // --- GESTION DES CLIENTS ---
+    Route::get('/dashboard/clients', [DashboardController::class, 'getClients']);
 
     // --- VUE D'ENSEMBLE ---
     Route::get('/dashboard/summary', [DashboardController::class, 'getSummary']);

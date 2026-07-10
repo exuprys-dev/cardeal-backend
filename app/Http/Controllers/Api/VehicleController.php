@@ -40,16 +40,30 @@ class VehicleController extends Controller
             $query->where('price', '<=', $request->max_price);
         }
 
-        // 6. On trie par les plus récents ajoutés et on pagine (9 par page pour le design de grille)
+        // 6. Recherche textuelle libre (ex: /api/vehicles?search=corolla)
+        // Le frontend (Catalogue.jsx) envoie bien ce paramètre depuis sa barre de
+        // recherche, mais rien ne le traitait ici : on cherche sur titre, marque
+        // et modèle, pour couvrir aussi bien "Toyota" que "Corolla" ou le titre complet.
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
+                    ->orWhere('model', 'like', "%{$search}%");
+            });
+        }
+
+        // 7. On trie par les plus récents ajoutés et on pagine (9 par page pour le design de grille)
         $vehicles = $query->latest()->paginate(9);
 
-        // 7. On retourne une réponse JSON propre avec un code HTTP 200 (Success)
+        // 8. On retourne une réponse JSON propre avec un code HTTP 200 (Success)
         return response()->json([
             'success' => true,
             'message' => 'Catalogue récupéré avec succès',
             'data' => $vehicles
         ], 200);
     }
+
 
     /**
      * Afficher les détails d'un véhicule spécifique
@@ -147,12 +161,49 @@ class VehicleController extends Controller
         // Validation (presque identique à store, mais les champs sont parfois optionnels selon la requête)
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|required|string|max:200',
+            'brand' => 'sometimes|required|string|max:100',
+            'model' => 'sometimes|required|string|max:100',
+            'year' => 'sometimes|required|integer|between:1900,2027',
+            'mileage' => 'sometimes|required|integer|min:0',
+            'fuel_type' => 'sometimes|required|in:Essence,Diesel,Électrique,Hybride',
+            'transmission' => 'sometimes|required|in:Manuelle,Automatique',
+            'condition' => 'sometimes|required|in:Neuf,Occasion',
+            'description' => 'sometimes|required|string',
+            'color' => 'sometimes|required|string|max:50',
+            'engine' => 'sometimes|nullable|string|max:50',
+            'doors' => 'sometimes|required|integer|between:2,5',
             'price' => 'sometimes|required|numeric|min:0',
             'status' => 'sometimes|required|in:Disponible,Réservé,Vendu',
+            'images' => 'sometimes|array', // On attend un tableau d'images
+            'images.*' => 'sometimes|image|mimes:jpeg,png,jpg,webp|max:2048'
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        // Gestion de l'upload des images physiques : si de nouvelles images sont
+        // envoyées, on remplace entièrement l'ancien jeu de photos (fichiers physiques
+        // + enregistrements en base) au lieu de les cumuler avec les précédentes.
+        if ($request->hasFile('images')) {
+            // 1. Supprimer les anciens fichiers physiques du disque
+            foreach ($vehicle->images as $oldImage) {
+                Storage::disk('public')->delete($oldImage->path);
+            }
+            // 2. Supprimer les anciens enregistrements en base
+            $vehicle->images()->delete();
+
+            // 3. Enregistrer les nouvelles images
+            foreach ($request->file('images') as $index => $imageFile) {
+                // On sauvegarde l'image dans le dossier "storage/app/public/vehicles"
+                $path = $imageFile->store('vehicles', 'public');
+
+                // On enregistre la liaison en BDD
+                $vehicle->images()->create([
+                    'path' => $path,
+                    'is_main' => ($index === 0) // La première image devient l'image principale
+                ]);
+            }
         }
 
         // Mise à jour des données textuelles
@@ -161,7 +212,7 @@ class VehicleController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Fiche du véhicule mise à jour avec succès.',
-            'data' => $vehicle
+            'data' => $vehicle->load('images')
         ], 200);
     }
 

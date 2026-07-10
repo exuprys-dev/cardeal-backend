@@ -30,21 +30,23 @@ class DashboardController extends Controller
         $vehicleIds = $vehicles->pluck('id');
 
         // Demandes de contact liées aux véhicules accessibles
-        $requests = ContactRequest::with('vehicle:id,brand,model')
-            ->whereIn('vehicle_id', $vehicleIds)
-            ->where('is_read', '=', false)
+        $requests = ContactRequest::with('vehicle')
+            ->where('is_read', false)
+            ->where(function ($query) use ($vehicleIds) {
+                $query->whereIn('vehicle_id', $vehicleIds)
+                    ->orWhereNull('vehicle_id');
+            })
             ->latest()
             ->get();
-
         // Rendez-vous d'essai liés aux véhicules accessibles
-        $appointments = TestDriveRequest::with('vehicle:id,brand,model')
+        $appointments = TestDriveRequest::with('vehicle')
             ->whereIn('vehicle_id', $vehicleIds)
             ->whereIn('status',  ['En attente', 'Approuvée']) // On ne veut que les rendez-vous en attente ou approuvés
             ->latest()
             ->get();
 
         // Historique des ventes (Si admin -> toutes les ventes, si agent -> uniquement ses ventes)
-        $salesQuery = Sales::with(['vehicle:id,brand,model', 'user:id,name']);
+        $salesQuery = Sales::with(['vehicle', 'user:id,name']);
         if ($user->role !== 'admin') {
             $salesQuery->where('user_id', $user->id);
         }
@@ -77,8 +79,8 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Rendez-vous introuvable'], 404);
         }
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:En attente,Approuvée,Refusée',
-            'requested_time' => 'nullable|date_format:H:i', // Format HH:MM
+            'status' => 'sometimes|in:En attente,Approuvée,Terminée,Annulée',
+            'requested_time' => 'sometimes|date_format:H:i', // Format HH:MM
         ]);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
@@ -111,11 +113,54 @@ class DashboardController extends Controller
         if ($vehicle) {
             $vehicle->update(['status' => 'Vendu']);
         }
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Vente ajoutée avec succès.',
             'data' => $sale
+        ], 200);
+    }
+
+    /**
+     * Liste des clients ayant fait une demande de contact ou un rendez-vous d'essai pour les véhicules 
+     */
+    public function getClients(Request $request)
+    {
+        // Récupération des clients ayant fait une demande de contact ou un rendez-vous d'essai
+        $contacts = ContactRequest::with('vehicle')->latest()->get();
+        $appointments = TestDriveRequest::with('vehicle')->latest()->get();
+
+        // On regroupe par email plutôt que de ne garder qu'un seul enregistrement par
+        // client (unique()) : un client peut avoir plusieurs demandes de contact et/ou
+        // plusieurs demandes d'essai (pour différents véhicules), on veut TOUT
+        // remonter pour lui, pas seulement la toute première demande rencontrée.
+        $allRecords = $contacts->concat($appointments);
+        $grouped = $allRecords->groupBy('email');
+
+        $clients = $grouped->map(function ($records, $email) {
+            // Identité (nom, téléphone) prise sur l'enregistrement le plus récent,
+            // qui a le plus de chances d'être à jour si le client a redonné ses infos.
+            $mostRecent = $records->sortByDesc('created_at')->first();
+
+            $contactsForClient = $records->filter(fn ($r) => $r instanceof ContactRequest)->values();
+            $appointmentsForClient = $records->filter(fn ($r) => $r instanceof TestDriveRequest)->values();
+
+            return [
+                'email' => $email,
+                'first_name' => $mostRecent->first_name,
+                'last_name' => $mostRecent->last_name,
+                'phone' => $mostRecent->phone,
+                'contacts' => $contactsForClient,
+                'appointments' => $appointmentsForClient,
+                'contacts_count' => $contactsForClient->count(),
+                'appointments_count' => $appointmentsForClient->count(),
+                'last_activity_at' => $mostRecent->created_at,
+            ];
+        })->sortByDesc('last_activity_at')->values();
+
+        return response()->json([
+            'success' => true,
+            'clients' => $clients
         ], 200);
     }
 }
