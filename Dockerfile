@@ -1,6 +1,6 @@
-FROM php:8.2-fpm
+FROM php:8.2-cli
 
-# Installer les dépendances système et PHP nécessaires
+# Installer les extensions et outils requis
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -8,28 +8,25 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     zip \
-    unzip \
-    nginx
+    unzip
 
-# Installer les extensions PHP indispensables pour Laravel et MySQL
+# Installer l'extension pdo_mysql pour la base Aiven
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Installer Composer
+# Récupérer Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copier le code du projet
 WORKDIR /var/www
 COPY . .
 
-# Installer les dépendances Laravel
+# Installer les dépendances Laravel sans les packages de dev
 RUN composer install --no-dev --optimize-autoloader
 
-# Configurer les permissions pour le stockage de Laravel
+# Droits d'écriture pour Laravel
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# Configurer Nginx
-COPY ./docker/nginx.conf /etc/nginx/sites-available/default
-
+# Port sur lequel Render va écouter
 EXPOSE 80
 
-CMD php artisan config:cache && php artisan route:cache && nginx -g "daemon off;"
+# Démarrer le serveur interne de PHP sur le port 80
+CMD php artisan config:cache && php artisan route:cache && php artisan serve --host=0.0.0.0 --port=80
