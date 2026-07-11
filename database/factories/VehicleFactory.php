@@ -17,7 +17,6 @@ class VehicleFactory extends Factory
      */
     public function definition(): array
     {
-        $brands = ['Toyota', 'Peugeot', 'Mercedes-Benz', 'Hyundai', 'Kia', 'Nissan'];
         $models = [
             'Toyota' => ['Corolla', 'Camry', 'RAV4', 'Hilux'],
             'Peugeot' => ['308', '2008', '508', '4008'],
@@ -27,18 +26,18 @@ class VehicleFactory extends Factory
             'Nissan' => ['Navara', 'Sunny', 'Qashqai', 'X-Trail']
         ];
 
-        // Choisit une marque au hasard directement depuis les clés du tableau $models
+        // On pioche directement et proprement dans les clés existantes du tableau
         $brand = $this->faker->randomElement(array_keys($models));
-        // Choisit un modèle correspondant
         $model = $this->faker->randomElement($models[$brand]);
+        $edition = $this->faker->randomElement(['Édition Limitée', 'Luxe', 'Sport', 'Standard']);
 
         return [
-            'title' => $brand . ' ' . $model . ' ' . $this->faker->randomElement(['Édition Limitée', 'Luxe', 'Sport', 'Standard']),
+            'title' => "{$brand} {$model} {$edition}",
             'brand' => $brand,
             'model' => $model,
             'year' => $this->faker->numberBetween(2015, 2026),
             'mileage' => $this->faker->numberBetween(0, 180000),
-            'price' => $this->faker->randomElement([4500000, 6000000, 8500000, 12000000, 25000000]), // Prix en FCFA par exemple
+            'price' => $this->faker->randomElement([4500000, 6000000, 8500000, 12000000, 25000000]),
             'fuel_type' => $this->faker->randomElement(['Essence', 'Diesel', 'Hybride']),
             'transmission' => $this->faker->randomElement(['Manuelle', 'Automatique']),
             'condition' => $this->faker->randomElement(['Neuf', 'Occasion']),
