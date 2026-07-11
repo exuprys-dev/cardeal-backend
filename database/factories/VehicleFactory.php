@@ -27,7 +27,9 @@ class VehicleFactory extends Factory
             'Nissan' => ['Navara', 'Sunny', 'Qashqai', 'X-Trail']
         ];
 
-        $brand = $this->faker->randomElement($brands);
+        // Choisit une marque au hasard directement depuis les clés du tableau $models
+        $brand = $this->faker->randomElement(array_keys($models));
+        // Choisit un modèle correspondant
         $model = $this->faker->randomElement($models[$brand]);
 
         return [

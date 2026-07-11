@@ -17,7 +17,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. On crée d'abord un compte Administrateur de test fixe pour pouvoir te connecter plus tard
-        $admin = User::create([
+        $admin = User::updateOrCreate([
+            'email' => 'admin@cardeal.com'
+        ], [
             'name' => 'Kouassi Antoine',
             'email' => 'admin@cardeal.com',
             'email_verified_at' => now(),
@@ -27,7 +29,9 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 2. On crée un deuxième agent de test pour simuler le cas "Multi-agents" (Option B)
-        $agent = User::create([
+        $agent = User::updateOrCreate([
+            'email' => 'karim@cardeal.com'
+        ], [
             'name' => 'Karim Ouedraogo',
             'email' => 'karim@cardeal.com',
             'email_verified_at' => now(),
