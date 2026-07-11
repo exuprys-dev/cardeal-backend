@@ -29,4 +29,5 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 EXPOSE 80
 
 # Démarrer le serveur interne de PHP sur le port 80
-CMD php artisan config:cache && php artisan route:cache && php artisan serve --host=0.0.0.0 --port=80
+# Démarrer les migrations automatiquement puis lancer le serveur interne de PHP
+CMD php artisan migrate --seed --force && php artisan config:cache && php artisan route:cache && php artisan serve --host=0.0.0.0 --port=80
